@@ -153,78 +153,55 @@ st.markdown("""
 
 # --- Set up Gemini API with Multiple Keys and Fallback ---
 import os
+import streamlit as st
+import google.generativeai as genai
 
-# --- Set up Gemini API from Streamlit Secrets ---
+# --- Set up Gemini API from environment variable (Streamlit Secrets) ---
 api_key = os.getenv("GEMINI_API_KEY")
 
 def initialize_gemini_model():
     """Initialize Gemini model with environment variable API key"""
-    if not api_key
+    if not api_key:
+        st.error("🚨 Gemini API key not found. Please set GEMINI_API_KEY in Streamlit Cloud.")
+        return None
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        return model
+    except Exception as e:
+        st.error(f"🚨 Failed to configure Gemini API: {e}")
+        return None
 
 
-def try_next_api_key():
-    """Switch to next available API key"""
-    if st.session_state.current_api_key_index < len(gemini_api_keys) - 1:
-        st.session_state.current_api_key_index += 1
-        return initialize_gemini_model()
-    return None
-
-def make_ai_request_with_fallback(prompt):
-    """Make AI request with automatic fallback to next API key if quota exceeded"""
+def make_ai_request(prompt: str):
+    """Make AI request with error handling"""
     model = initialize_gemini_model()
     
     if not model:
         return None, "Error: Could not initialize AI model"
     
-    max_attempts = len(gemini_api_keys)
-    
-    for attempt in range(max_attempts):
-        try:
-            response = model.generate_content(prompt)
-            
-            # Check if response is valid
-            extracted_text = None
-            if hasattr(response, 'text'):
-                extracted_text = response.text
-            elif hasattr(response, 'parts') and response.parts:
-                extracted_text = "".join(part.text for part in response.parts if hasattr(part, 'text'))
-            else:
-                try:
-                    extracted_text = f"AI Response Blocked or Empty. Prompt Feedback: {response.prompt_feedback}"
-                except Exception:
-                    extracted_text = "Error: Received unexpected or empty response structure from AI."
+    try:
+        response = model.generate_content(prompt)
 
-            if extracted_text and extracted_text.strip():
+        # Try extracting response text
+        if hasattr(response, 'text') and response.text:
+            return response.text.strip(), None
+        elif hasattr(response, 'parts') and response.parts:
+            extracted_text = "".join(
+                part.text for part in response.parts if hasattr(part, 'text')
+            )
+            if extracted_text.strip():
                 return extracted_text.strip(), None
-            else:
-                return None, "Error: Received empty response from AI."
-                
-        except Exception as e:
-            error_message = str(e).lower()
-            
-            # Check if it's a quota exceeded error
-            if "quota" in error_message or "exceed" in error_message or "limit" in error_message:
-                print(f"API Key {st.session_state.current_api_key_index + 1} quota exceeded. Trying next key...")
-                
-                # Try next API key
-                next_model = try_next_api_key()
-                if next_model:
-                    model = next_model
-                    continue  # Retry with new key
-                else:
-                    # All keys exhausted
-                    return None, "❌ All AI Mentor API keys have exceeded their daily quota. Please try again later or contact support for assistance."
-            else:
-                # Other error, don't retry
-                return None, f"AI request error: {e}"
-    
-    # If we reach here, all attempts failed
-    return None, "❌ All AI Mentor API keys have exceeded their daily quota. Please try again later or contact support for assistance."
+        
+        return None, "Error: AI returned an empty or blocked response."
 
-# Initialize the model on startup
+    except Exception as e:
+        return None, f"AI request error: {e}"
+
+
+# Initialize model at startup
 model = initialize_gemini_model()
 if not model:
-    st.error("🚨 Failed to initialize AI model. Please check API keys.")
     st.stop()
 
 # --- Advanced SQL Questions List (Segmented 3 Levels, All Advanced, Total 8) ---
