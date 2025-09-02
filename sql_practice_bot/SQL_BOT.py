@@ -156,26 +156,15 @@ st.markdown("""
 
 
 # --- Set up Gemini API with Multiple Keys and Fallback ---
-gemini_api_keys = [
-    "AIzaSyAfzl_66GZsgaYjAM7cT2djVCBCAr86t2k",  # Primary key
-    "AIzaSyD3g71Fj_XymP121NMcxSEI8imLKpMd594",  # Fallback key 1
-    "AIzaSyCzmDa2KaDwzyRVSgYcGB8gBMcofgQFUFw"   # Fallback key 2
-]
+import os
 
-# Initialize session state for current API key index
-if "current_api_key_index" not in st.session_state:
-    st.session_state.current_api_key_index = 0
+# --- Set up Gemini API from Streamlit Secrets ---
+api_key = os.getenv("GEMINI_API_KEY")
 
 def initialize_gemini_model():
-    """Initialize Gemini model with current API key"""
-    current_key = gemini_api_keys[st.session_state.current_api_key_index]
-    try:
-        genai.configure(api_key=current_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        return model
-    except Exception as e:
-        st.error(f"🚨 Failed to configure Gemini API: {e}")
-        return None
+    """Initialize Gemini model with environment variable API key"""
+    if not api_key
+
 
 def try_next_api_key():
     """Switch to next available API key"""
