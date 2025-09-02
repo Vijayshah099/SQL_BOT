@@ -3,10 +3,6 @@ import google.generativeai as genai
 import pandas as pd
 import re
 import duckdb
-import streamlit as st
-
-
-import streamlit as st
 
 
 
