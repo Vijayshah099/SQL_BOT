@@ -2303,9 +2303,7 @@ elif st.session_state.quiz_completed:
         # Retry section
         display_retry_section()
         
-    
-        """, unsafe_allow_html=True)
-    
+
     # Usage example:
     final_score = calculate_score(st.session_state.user_answers)
 
